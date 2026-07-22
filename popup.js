@@ -16,6 +16,20 @@ const COLUMNS = [
   { field: '50', label: 'Text' },
 ];
 
+// ponytail: runs in page's MAIN world via scripting.executeScript, bypasses CSP
+function addNewItemInPage() {
+  var el = document.querySelector('[id^="tv"][id$="_items"]');
+  if (!el) return { ok: false, error: 'MIGX grid not found.' };
+  try {
+    var grid = Ext.getCmp(el.id);
+    if (!grid || typeof grid.addNewItem !== 'function') return { ok: false, error: 'addNewItem not available.' };
+    grid.addNewItem();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 function setStatus(msg, isError) {
   status.textContent = msg;
   status.className = isError ? 'error' : 'success';
@@ -73,11 +87,28 @@ table.addEventListener('click', async (e) => {
   setStatus(`Adding day ${dayIndex + 1}...`, false);
 
   try {
-    const res = await sendToTab({ action: 'addDay', dayIndex });
-    if (res.ok) setStatus(res.message, false);
-    else setStatus(res.error, true);
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    const [injectionResult] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      world: 'MAIN',
+      func: addNewItemInPage,
+    });
+
+    if (!injectionResult.result.ok) {
+      setStatus(injectionResult.result.error, true);
+      btn.disabled = false;
+      return;
+    }
+
+    const { days } = await chrome.storage.local.get(['days']);
+    const day = days[dayIndex];
+
+    const fillResult = await chrome.tabs.sendMessage(tab.id, { action: 'fillAddedDay', day });
+    if (fillResult.ok) setStatus(fillResult.message, false);
+    else setStatus(fillResult.error, true);
   } catch (e) {
-    setStatus(e.message || 'Could not reach page. Reload it and try again.', true);
+    setStatus(e.message || 'Could not reach page.', true);
   }
   btn.disabled = false;
 });

@@ -79,57 +79,29 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ponytail: injects a <script> into the page's main world and waits for a CustomEvent response
-function injectPageScript(fn, eventName) {
-  return new Promise((resolve) => {
-    const script = document.createElement('script');
-    script.textContent = '(' + fn.toString() + ')(' + JSON.stringify(eventName) + ');';
-    document.addEventListener(eventName, function handler(e) {
-      document.removeEventListener(eventName, handler);
-      script.remove();
-      resolve(e.detail);
-    }, { once: true });
-    document.documentElement.appendChild(script);
-  });
-}
-
-async function addSingleDay(day) {
+function pollAndFill(day) {
   const currentRows = document.querySelectorAll('.contentblocks-repeater-row').length;
-  const eventName = 'fc_' + Math.random().toString(36).slice(2);
+  let attempts = 0;
 
-  const result = await injectPageScript(function(evtName) {
-    var el = document.querySelector('[id^="tv"][id$="_items"]');
-    if (!el) {
-      document.dispatchEvent(new CustomEvent(evtName, { detail: { ok: false, error: 'MIGX grid not found. Are you on the MODX edit page?' } }));
-      return;
-    }
-    try {
-      var grid = Ext.getCmp(el.id);
-      if (!grid || typeof grid.addNewItem !== 'function') {
-        document.dispatchEvent(new CustomEvent(evtName, { detail: { ok: false, error: 'addNewItem not available on grid.' } }));
+  return new Promise((resolve) => {
+    function check() {
+      attempts++;
+      const rows = document.querySelectorAll('.contentblocks-repeater-row');
+      if (rows.length > currentRows) {
+        const newRow = rows[rows.length - 1];
+        fillSingleRow(newRow, day);
+        var title = day['41']?.value || day['40']?.value || '';
+        resolve({ ok: true, message: 'Added day "' + title + '"' });
         return;
       }
-      grid.addNewItem();
-      document.dispatchEvent(new CustomEvent(evtName, { detail: { ok: true } }));
-    } catch(e) {
-      document.dispatchEvent(new CustomEvent(evtName, { detail: { ok: false, error: e.message } }));
+      if (attempts >= 30) {
+        resolve({ ok: false, error: 'Timed out waiting for new row to appear. Try again.' });
+        return;
+      }
+      setTimeout(check, 300);
     }
-  }, eventName);
-
-  if (!result || !result.ok) return result || { ok: false, error: 'Unknown error' };
-
-  for (let i = 0; i < 30; i++) {
-    await sleep(300);
-    const rows = document.querySelectorAll('.contentblocks-repeater-row');
-    if (rows.length > currentRows) {
-      const newRow = rows[rows.length - 1];
-      fillSingleRow(newRow, day);
-      var title = day['41']?.value || day['40']?.value || '';
-      return { ok: true, message: 'Added day "' + title + '"' };
-    }
-  }
-
-  return { ok: false, error: 'Timed out waiting for new row to appear.' };
+    check();
+  });
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -158,14 +130,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
-  if (msg.action === 'addDay') {
-    chrome.storage.local.get(['days'], (data) => {
-      if (!data.days || !data.days[msg.dayIndex]) {
-        sendResponse({ ok: false, error: 'Day not found in storage.' });
-        return;
-      }
-      addSingleDay(data.days[msg.dayIndex]).then(sendResponse);
-    });
+  if (msg.action === 'fillAddedDay') {
+    pollAndFill(msg.day).then(sendResponse);
     return true;
   }
 });
