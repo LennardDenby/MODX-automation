@@ -76,8 +76,8 @@ table.addEventListener('click', async (e) => {
     const res = await sendToTab({ action: 'addDay', dayIndex });
     if (res.ok) setStatus(res.message, false);
     else setStatus(res.error, true);
-  } catch (_) {
-    setStatus('Could not reach page. Reload the page and try again.', true);
+  } catch (e) {
+    setStatus(e.message || 'Could not reach page. Reload it and try again.', true);
   }
   btn.disabled = false;
 });
@@ -92,7 +92,16 @@ document.getElementById('copyBtn').addEventListener('click', async () => {
     } else {
       setStatus(res.error, true);
     }
-  } catch (_) {}
+  } catch (e) {
+    setStatus(e.message || 'Could not reach page. Reload it and try again.', true);
+  }
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  chrome.storage.local.remove(['days', 'count', 'title', 'url'], () => {
+    setStatus('Cleared.', false);
+    loadStored();
+  });
 });
 
 document.getElementById('pasteBtn').addEventListener('click', async () => {
@@ -101,7 +110,9 @@ document.getElementById('pasteBtn').addEventListener('click', async () => {
     const res = await sendToTab({ action: 'paste' });
     if (res.ok) setStatus(res.message || `Pasted ${res.filled} days.`, false);
     else setStatus(res.error, true);
-  } catch (_) {}
+  } catch (e) {
+    setStatus(e.message || 'Could not reach page. Reload it and try again.', true);
+  }
 });
 
 function loadStored() {

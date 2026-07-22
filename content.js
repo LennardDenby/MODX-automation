@@ -75,29 +75,48 @@ function fillSingleRow(row, day) {
   }
 }
 
-function findMIGXGrid() {
-  const gridEl = document.querySelector('[id^="tv"][id$="_items"]');
-  if (!gridEl) return null;
-  try {
-    const grid = Ext.getCmp(gridEl.id);
-    if (grid && typeof grid.addNewItem === 'function') return grid;
-  } catch (e) { /* ponytail: Ext might not be loaded yet */ }
-  return null;
-}
-
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ponytail: injects a <script> into the page's main world and waits for a CustomEvent response
+function injectPageScript(fn, eventName) {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.textContent = '(' + fn.toString() + ')(' + JSON.stringify(eventName) + ');';
+    document.addEventListener(eventName, function handler(e) {
+      document.removeEventListener(eventName, handler);
+      script.remove();
+      resolve(e.detail);
+    }, { once: true });
+    document.documentElement.appendChild(script);
+  });
+}
+
 async function addSingleDay(day) {
   const currentRows = document.querySelectorAll('.contentblocks-repeater-row').length;
+  const eventName = 'fc_' + Math.random().toString(36).slice(2);
 
-  const grid = findMIGXGrid();
-  if (!grid) {
-    return { ok: false, error: 'MIGX grid not found. Make sure you are on the MODX edit page.' };
-  }
+  const result = await injectPageScript(function(evtName) {
+    var el = document.querySelector('[id^="tv"][id$="_items"]');
+    if (!el) {
+      document.dispatchEvent(new CustomEvent(evtName, { detail: { ok: false, error: 'MIGX grid not found. Are you on the MODX edit page?' } }));
+      return;
+    }
+    try {
+      var grid = Ext.getCmp(el.id);
+      if (!grid || typeof grid.addNewItem !== 'function') {
+        document.dispatchEvent(new CustomEvent(evtName, { detail: { ok: false, error: 'addNewItem not available on grid.' } }));
+        return;
+      }
+      grid.addNewItem();
+      document.dispatchEvent(new CustomEvent(evtName, { detail: { ok: true } }));
+    } catch(e) {
+      document.dispatchEvent(new CustomEvent(evtName, { detail: { ok: false, error: e.message } }));
+    }
+  }, eventName);
 
-  grid.addNewItem();
+  if (!result || !result.ok) return result || { ok: false, error: 'Unknown error' };
 
   for (let i = 0; i < 30; i++) {
     await sleep(300);
@@ -105,8 +124,8 @@ async function addSingleDay(day) {
     if (rows.length > currentRows) {
       const newRow = rows[rows.length - 1];
       fillSingleRow(newRow, day);
-      const title = day['41']?.value || day['40']?.value || '';
-      return { ok: true, message: `Added day "${title}"` };
+      var title = day['41']?.value || day['40']?.value || '';
+      return { ok: true, message: 'Added day "' + title + '"' };
     }
   }
 
