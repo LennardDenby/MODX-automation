@@ -5,12 +5,14 @@ function readInputValue(el) {
 }
 
 function writeInputValue(el, value) {
-  const prev = el.value;
   el.value = value;
-  if (el.value !== prev || value !== prev) {
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-  }
+  try {
+    const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement : HTMLInputElement;
+    const nativeSetter = Object.getOwnPropertyDescriptor(proto.prototype, 'value').set;
+    if (nativeSetter) nativeSetter.call(el, value);
+  } catch (_) {}
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 function scrapeDays() {
@@ -75,35 +77,6 @@ function fillSingleRow(row, day) {
   }
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function pollAndFill(day) {
-  const currentRows = document.querySelectorAll('.contentblocks-repeater-row').length;
-  let attempts = 0;
-
-  return new Promise((resolve) => {
-    function check() {
-      attempts++;
-      const rows = document.querySelectorAll('.contentblocks-repeater-row');
-      if (rows.length > currentRows) {
-        const newRow = rows[rows.length - 1];
-        fillSingleRow(newRow, day);
-        var title = day['41']?.value || day['40']?.value || '';
-        resolve({ ok: true, message: 'Added day "' + title + '"' });
-        return;
-      }
-      if (attempts >= 30) {
-        resolve({ ok: false, error: 'Timed out waiting for new row to appear. Try again.' });
-        return;
-      }
-      setTimeout(check, 300);
-    }
-    check();
-  });
-}
-
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === 'copy') {
     const days = scrapeDays();
@@ -127,11 +100,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         message: `Pasted ${result.filled} days.${result.skipped ? ` ${result.skipped} days skipped (not enough target rows).` : ''}`
       });
     });
-    return true;
-  }
-
-  if (msg.action === 'fillAddedDay') {
-    pollAndFill(msg.day).then(sendResponse);
     return true;
   }
 });

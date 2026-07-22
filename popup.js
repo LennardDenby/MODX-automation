@@ -16,8 +16,23 @@ const COLUMNS = [
   { field: '50', label: 'Text' },
 ];
 
-// ponytail: runs in page's MAIN world via scripting.executeScript, bypasses CSP
-function addNewItemInPage() {
+// ponytail: runs in page's MAIN world via chrome.scripting.executeScript, bypasses CSP.
+// Does everything at the MIGX store level — no ContentBlocks DOM fiddling.
+function addDayWithData(day) {
+  var FIELD_MAP = {
+    '40': ['day_number'],
+    '41': ['en_daytitle', 'web_daytitle', 'sv_daytitle'],
+    '42': ['en_accommodation', 'web_accommodation', 'sv_accommodation'],
+    '43': ['en_meals', 'web_meals', 'sv_meals'],
+    '44': ['en_transportation', 'web_transportation', 'sv_transportation'],
+    '45': ['en_duration', 'web_duration', 'sv_duration'],
+    '46': ['ascdesc'],
+    '47': ['distance'],
+    '48': ['coords'],
+    '49': ['gallery'],
+    '50': ['en_text', 'web_text', 'sv_text'],
+  };
+
   var captions = document.querySelectorAll('.modx-tv-caption');
   var gridId = null;
   for (var i = 0; i < captions.length; i++) {
@@ -29,14 +44,38 @@ function addNewItemInPage() {
     }
   }
   if (!gridId) return { ok: false, error: 'Day By Day section not found.' };
+
   try {
     var grid = Ext.getCmp(gridId);
-    if (!grid || typeof grid.addNewItem !== 'function') return { ok: false, error: 'addNewItem not available.' };
-    grid.addNewItem();
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e.message };
+    if (!grid || typeof grid.addNewItem !== 'function') return { ok: false, error: 'Grid not available.' };
+  } catch (e) { return { ok: false, error: e.message }; }
+
+  grid.addNewItem();
+
+  var s = grid.getStore();
+  var idx = s.getCount() - 1;
+  var rec = s.getAt(idx);
+  var item = rec.json || {};
+
+  var filled = 0;
+  for (var df in day) {
+    var fields = FIELD_MAP[df];
+    if (!fields) continue;
+    var val = day[df].value;
+    for (var j = 0; j < fields.length; j++) {
+      item[fields[j]] = val;
+      rec.set(fields[j], val);
+    }
+    filled++;
   }
+
+  rec.json = item;
+  grid.getView().refresh();
+  grid.call_collectmigxitems = true;
+  grid.collectItems();
+
+  var title = day['41'] ? day['41'].value : (day['40'] ? day['40'].value : '');
+  return { ok: true, message: 'Added day "' + title + '" (' + filled + ' fields)' };
 }
 
 function setStatus(msg, isError) {
@@ -97,25 +136,18 @@ table.addEventListener('click', async (e) => {
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const { days } = await chrome.storage.local.get(['days']);
+    const day = days[dayIndex];
 
     const [injectionResult] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       world: 'MAIN',
-      func: addNewItemInPage,
+      func: addDayWithData,
+      args: [day],
     });
 
-    if (!injectionResult.result.ok) {
-      setStatus(injectionResult.result.error, true);
-      btn.disabled = false;
-      return;
-    }
-
-    const { days } = await chrome.storage.local.get(['days']);
-    const day = days[dayIndex];
-
-    const fillResult = await chrome.tabs.sendMessage(tab.id, { action: 'fillAddedDay', day });
-    if (fillResult.ok) setStatus(fillResult.message, false);
-    else setStatus(fillResult.error, true);
+    if (injectionResult.result.ok) setStatus(injectionResult.result.message, false);
+    else setStatus(injectionResult.result.error, true);
   } catch (e) {
     setStatus(e.message || 'Could not reach page.', true);
   }
