@@ -11,6 +11,8 @@
     .addDayBtn:disabled { background: #95a5a6; cursor: default; }
     #clearBtn { background: #e74c3c; color: white; }
     #status { margin: 6px 0; font-size: 12px; color: #666; min-height: 16px; }
+    #status .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #ccc; border-top-color: #4a90d9; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 4px; vertical-align: -2px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .error { color: #c0392b; }
     .success { color: #27ae60; }
     hr { margin: 8px 0; border: none; border-top: 1px solid #eee; }

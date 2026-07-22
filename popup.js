@@ -162,8 +162,13 @@ function addDayWithData(day) {
 }
 
 function setStatus(msg, isError) {
-  status.textContent = msg;
+  status.innerHTML = escapeHtml(msg);
   status.className = isError ? 'error' : 'success';
+}
+
+function setLoading(msg) {
+  status.innerHTML = '<span class="spinner"></span>' + escapeHtml(msg);
+  status.className = '';
 }
 
 async function sendToTab(msg) {
@@ -256,7 +261,7 @@ document.getElementById('copyBtn').addEventListener('click', async () => {
     var res = await sendToTab({ action: 'copy' });
     if (!res.ok) { setStatus(res.error, true); return; }
 
-    setStatus('Translating...', false);
+    setLoading('Translating...');
 
     var data = await new Promise(function (r) { chrome.storage.local.get(['days', 'title'], r); });
     var days = data.days;
