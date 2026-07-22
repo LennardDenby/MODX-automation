@@ -3,27 +3,38 @@
 <head>
   <meta charset="utf-8">
   <style>
-    body { width: 520px; padding: 10px; font-family: system-ui, sans-serif; font-size: 12px; }
+    body { width: 580px; padding: 10px; font-family: system-ui, sans-serif; font-size: 12px; }
     button { padding: 8px 12px; margin: 2px; font-size: 13px; cursor: pointer; border: none; border-radius: 4px; }
     #copyBtn { background: #4a90d9; color: white; }
     #pasteBtn { background: #27ae60; color: white; }
-    #clearBtn { background: #e74c3c; color: white; }
     .addDayBtn { padding: 2px 6px; font-size: 10px; background: #27ae60; color: white; white-space: nowrap; }
     .addDayBtn:disabled { background: #95a5a6; cursor: default; }
+    #clearBtn { background: #e74c3c; color: white; }
     #status { margin: 6px 0; font-size: 12px; color: #666; min-height: 16px; }
     .error { color: #c0392b; }
     .success { color: #27ae60; }
     hr { margin: 8px 0; border: none; border-top: 1px solid #eee; }
-    #tableWrap { max-height: 340px; overflow: auto; display: none; }
+    #settings { margin-bottom: 6px; display: flex; gap: 4px; align-items: center; }
+    #apiKeyInput { width: 220px; padding: 3px 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; }
+    #saveKeyBtn, #clearKeyBtn { padding: 3px 8px; font-size: 10px; }
+    #settings label { font-size: 10px; color: #888; }
+    #tableWrap { max-height: 300px; overflow: auto; display: none; }
     table { border-collapse: collapse; width: 100%; white-space: nowrap; font-size: 11px; }
     th, td { padding: 4px 6px; border: 1px solid #ddd; text-align: left; }
     th { background: #f5f5f5; position: sticky; top: 0; z-index: 1; }
     td { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
-    tr:nth-child(even) { background: #fafafa; }
+    tr:nth-child(4n-1), tr:nth-child(4n) { background: #fafafa; }
+    .enRow td { font-size: 10px; color: #888; font-style: italic; padding: 1px 6px; background: #f4f4f4; border-color: #eee; }
+    .enRow td:first-child { color: #bbb; font-style: normal; font-weight: bold; }
     #stored { font-size: 11px; color: #999; margin-bottom: 4px; }
   </style>
 </head>
 <body>
+  <div id="settings" style="display:none;">
+    <label>Gemini API Key:</label>
+    <input type="password" id="apiKeyInput" placeholder="Enter your key">
+    <button id="saveKeyBtn">Save</button>
+  </div>
   <button id="copyBtn">Copy Days from This Page</button>
   <button id="pasteBtn">Paste Days into This Page</button>
   <button id="clearBtn">Clear Stored Days</button>
@@ -33,6 +44,7 @@
   <div id="tableWrap">
     <table id="table"></table>
   </div>
+  <script src="api-key.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
