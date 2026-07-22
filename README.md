@@ -8,7 +8,7 @@
 
 ## Usage
 1. Open the **Document page** → click extension icon → **Copy Days from This Page**
-2. Open the **Template Variables** (new template) → click icon → **Paste ALL Days Into This Page**
+2. Open the **Template Variables** → click extension icon → **Paste ALL Days Into This Page**
 
 Each stored day also has an **Add** button to insert one day at a time.
 
