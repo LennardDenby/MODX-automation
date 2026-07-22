@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Field Copier",
+  "version": "1.0",
+  "description": "Copy form fields from one page and paste them into another",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ]
+}

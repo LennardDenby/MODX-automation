@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { width: 520px; padding: 10px; font-family: system-ui, sans-serif; font-size: 12px; }
+    button { padding: 8px 12px; margin: 2px; font-size: 13px; cursor: pointer; border: none; border-radius: 4px; }
+    #copyBtn { background: #4a90d9; color: white; }
+    #pasteBtn { background: #27ae60; color: white; }
+    .addDayBtn { padding: 2px 6px; font-size: 10px; background: #27ae60; color: white; white-space: nowrap; }
+    .addDayBtn:disabled { background: #95a5a6; cursor: default; }
+    #status { margin: 6px 0; font-size: 12px; color: #666; min-height: 16px; }
+    .error { color: #c0392b; }
+    .success { color: #27ae60; }
+    hr { margin: 8px 0; border: none; border-top: 1px solid #eee; }
+    #tableWrap { max-height: 340px; overflow: auto; display: none; }
+    table { border-collapse: collapse; width: 100%; white-space: nowrap; font-size: 11px; }
+    th, td { padding: 4px 6px; border: 1px solid #ddd; text-align: left; }
+    th { background: #f5f5f5; position: sticky; top: 0; z-index: 1; }
+    td { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+    tr:nth-child(even) { background: #fafafa; }
+    #stored { font-size: 11px; color: #999; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <button id="copyBtn">Copy Days from This Page</button>
+  <button id="pasteBtn">Paste Days into This Page</button>
+  <div id="status"></div>
+  <hr>
+  <div id="stored"></div>
+  <div id="tableWrap">
+    <table id="table"></table>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
