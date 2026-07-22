@@ -122,13 +122,8 @@ function addDayWithData(day) {
     if (!grid || typeof grid.addNewItem !== 'function') return { ok: false, error: 'Grid not available.' };
   } catch (e) { return { ok: false, error: e.message }; }
 
-  grid.addNewItem();
-
-  var s = grid.getStore();
-  var idx = s.getCount() - 1;
-  var rec = s.getAt(idx);
-  var item = rec.json || {};
-
+  // ponytail: build record manually to avoid addNewItem's internal collectItems race
+  var item = {};
   var filled = 0;
   for (var df in day) {
     var fields = FIELD_MAP[df];
@@ -137,16 +132,27 @@ function addDayWithData(day) {
     for (var j = 0; j < fields.length; j++) {
       if (fields[j].indexOf('en_') === 0 && day[df].en) {
         item[fields[j]] = day[df].en;
-        rec.set(fields[j], day[df].en);
       } else {
         item[fields[j]] = val;
-        rec.set(fields[j], val);
       }
     }
     filled++;
   }
 
+  var s = grid.getStore();
+  grid.autoinc = parseInt(grid.autoinc) + 1;
+  s.loadData([item], true); // append to store
+
+  var idx = s.getCount() - 1;
+  var rec = s.getAt(idx);
+  item.MIGX_id = grid.autoinc;
+  rec.set('MIGX_id', grid.autoinc);
   rec.json = item;
+
+  for (var key in item) {
+    if (key !== 'MIGX_id') rec.set(key, item[key]);
+  }
+
   grid.getView().refresh();
   grid.call_collectmigxitems = true;
   grid.collectItems();

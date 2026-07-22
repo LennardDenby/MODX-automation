@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Field Copier",
+  "name": "Lennard er best<3",
   "version": "1.0",
   "description": "Copy form fields from one page and paste them into another",
   "permissions": ["activeTab", "storage", "scripting"],
