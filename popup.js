@@ -18,10 +18,19 @@ const COLUMNS = [
 
 // ponytail: runs in page's MAIN world via scripting.executeScript, bypasses CSP
 function addNewItemInPage() {
-  var el = document.querySelector('[id^="tv"][id$="_items"]');
-  if (!el) return { ok: false, error: 'MIGX grid not found.' };
+  var captions = document.querySelectorAll('.modx-tv-caption');
+  var gridId = null;
+  for (var i = 0; i < captions.length; i++) {
+    if (captions[i].textContent.trim() === 'Day By Day') {
+      var cid = captions[i].id;
+      var tvNum = cid.replace('tv', '').split('-')[0];
+      gridId = 'tv' + tvNum + '_items';
+      break;
+    }
+  }
+  if (!gridId) return { ok: false, error: 'Day By Day section not found.' };
   try {
-    var grid = Ext.getCmp(el.id);
+    var grid = Ext.getCmp(gridId);
     if (!grid || typeof grid.addNewItem !== 'function') return { ok: false, error: 'addNewItem not available.' };
     grid.addNewItem();
     return { ok: true };
