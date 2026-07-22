@@ -4,17 +4,6 @@ function readInputValue(el) {
   return el.value || '';
 }
 
-function writeInputValue(el, value) {
-  el.value = value;
-  try {
-    const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement : HTMLInputElement;
-    const nativeSetter = Object.getOwnPropertyDescriptor(proto.prototype, 'value').set;
-    if (nativeSetter) nativeSetter.call(el, value);
-  } catch (_) {}
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
 function scrapeDays() {
   const rows = document.querySelectorAll('.contentblocks-repeater-row');
   const days = [];
@@ -36,45 +25,14 @@ function scrapeDays() {
       day[dataField] = { label, value };
     }
 
+    // ponytail: skip empty placeholder days
+    var dayNum = day['40'];
+    if (!dayNum || !dayNum.value || !/^\d+$/.test(String(dayNum.value).trim())) continue;
+
     if (Object.keys(day).length > 0) days.push(day);
   }
 
   return days;
-}
-
-function fillDays(days) {
-  const rows = document.querySelectorAll('.contentblocks-repeater-row');
-  const result = { filled: 0, skipped: 0, targetRows: rows.length };
-
-  for (let i = 0; i < Math.min(days.length, rows.length); i++) {
-    const row = rows[i];
-    const day = days[i];
-    fillSingleRow(row, day);
-    result.filled++;
-  }
-
-  if (days.length > rows.length) {
-    result.skipped = days.length - rows.length;
-  }
-
-  return result;
-}
-
-function fillSingleRow(row, day) {
-  const fields = row.querySelectorAll('li[data-field]');
-  for (const field of fields) {
-    const dataField = field.getAttribute('data-field');
-    const entry = day[dataField];
-    if (!entry) continue;
-
-    const label = field.querySelector('label')?.textContent?.trim() || '';
-    if (label !== entry.label) continue;
-
-    const input = field.querySelector('input, textarea');
-    if (!input) continue;
-
-    writeInputValue(input, entry.value);
-  }
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -82,23 +40,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     const days = scrapeDays();
     chrome.storage.local.set({ days, count: days.length, url: location.href, title: document.title }, () => {
       sendResponse({ ok: true, count: days.length });
-    });
-    return true;
-  }
-
-  if (msg.action === 'paste') {
-    chrome.storage.local.get(['days', 'count'], (data) => {
-      if (!data.days || data.days.length === 0) {
-        sendResponse({ ok: false, error: 'No days copied yet. Copy from source page first.' });
-        return;
-      }
-      const result = fillDays(data.days);
-      sendResponse({
-        ok: true,
-        ...result,
-        total: data.count,
-        message: `Pasted ${result.filled} days.${result.skipped ? ` ${result.skipped} days skipped (not enough target rows).` : ''}`
-      });
     });
     return true;
   }

@@ -299,13 +299,37 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 });
 
 document.getElementById('pasteBtn').addEventListener('click', async () => {
-  setStatus('Pasting...', false);
   try {
-    var res = await sendToTab({ action: 'paste' });
-    if (res.ok) setStatus(res.message || 'Pasted ' + res.filled + ' days.', false);
-    else setStatus(res.error, true);
+    var [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    var storedData = await new Promise(function (r) { chrome.storage.local.get(['days'], r); });
+    var days = storedData.days;
+
+    if (!days || days.length === 0) {
+      setStatus('No days stored.', true);
+      return;
+    }
+
+    for (var i = 0; i < days.length; i++) {
+      setLoading('Adding day ' + (i + 1) + '/' + days.length + '...');
+
+      var [result] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        world: 'MAIN',
+        func: addDayWithData,
+        args: [days[i]],
+      });
+
+      if (!result.result.ok) {
+        setStatus('Failed at day ' + (i + 1) + ': ' + result.result.error, true);
+        return;
+      }
+
+      await new Promise(function (r) { setTimeout(r, 800); });
+    }
+
+    setStatus('Pasted all ' + days.length + ' days.', false);
   } catch (e) {
-    setStatus(e.message || 'Could not reach page. Reload it and try again.', true);
+    setStatus(e.message || 'Error during paste.', true);
   }
 });
 
