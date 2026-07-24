@@ -27,7 +27,7 @@ function scrapeDays() {
 
     // ponytail: skip empty placeholder days
     var dayNum = day['40'];
-    if (!dayNum || !dayNum.value || !/^\d+$/.test(String(dayNum.value).trim())) continue;
+    if (!dayNum || !dayNum.value || !/^[\d\-]+$/.test(String(dayNum.value).trim())) continue;
 
     if (Object.keys(day).length > 0) days.push(day);
   }
